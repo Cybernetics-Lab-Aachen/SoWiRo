@@ -1,0 +1,2 @@
+# SoWiRo
+Socializing with Robots
