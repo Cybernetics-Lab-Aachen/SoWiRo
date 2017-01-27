@@ -1,0 +1,28 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0.0",
+  "FriendlyName": "OptiTrack - NatNet Streaming Client",
+  "Description": "Provides support for real-time rigid body motion capture streaming from NatNet server applications such as OptiTrack Motive.",
+  "Category": "OptiTrack",
+  "CreatedBy": "OptiTrack",
+  "CreatedByURL": "https://www.optitrack.com/",
+  "DocsURL": "http://wiki.optitrack.com/index.php?title=OptiTrack_Unreal_Engine_4_Plugin",
+  "MarketplaceURL": "",
+  "SupportURL": "https://www.optitrack.com/support/",
+  "Modules": [
+    {
+      "Name": "OptitrackNatnet",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Win32"
+      ]
+    }
+  ],
+  "EnabledByDefault": true,
+  "CanContainContent": false,
+  "IsBetaVersion": false,
+  "Installed": true
+}
