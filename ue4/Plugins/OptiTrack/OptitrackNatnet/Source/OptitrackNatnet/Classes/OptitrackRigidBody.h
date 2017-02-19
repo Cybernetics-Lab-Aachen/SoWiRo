@@ -6,6 +6,7 @@
 
 #include "OptitrackRigidBody.generated.h"
 
+
 /**
 * A simple component that drives the position and rotation of its actor's
 * root component according to the pose of a specified tracked rigid body.

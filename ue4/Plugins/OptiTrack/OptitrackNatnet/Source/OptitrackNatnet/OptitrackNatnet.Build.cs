@@ -10,6 +10,8 @@ public class OptitrackNatnet : ModuleRules
 {
     public OptitrackNatnet( TargetInfo Target )
     {
+        Definitions.Add( "NATNETLIB_IMPORTS" );
+
         PublicIncludePaths.AddRange(
             new string[] {
                 "OptitrackNatnet/Public",
@@ -54,30 +56,35 @@ public class OptitrackNatnet : ModuleRules
             );
 
 
-        AddThirdPartyPrivateStaticDependencies( Target
-                // ... add any third party modules that your module depends on here ...
-            );
-
-
         /****************************************/
 
         // If you update this path, ensure the DLL runtime delay load path in FOptitrackNatnetModule::StartupModule stays in sync.
         string NatNetPath = Path.GetFullPath( Path.Combine( ModuleDirectory, "..", "..", "ThirdParty", "NatNetSDK" ) );
-        string NatNetLibBinPath = "";
-
-        if ( Target.Platform == UnrealTargetPlatform.Win64 )
-        {
-            NatNetLibBinPath = Path.Combine( NatNetPath, "lib", "x64" );
-        }
-        else if ( Target.Platform == UnrealTargetPlatform.Win32 )
-        {
-            NatNetLibBinPath = Path.Combine( NatNetPath, "lib" );
-        }
-
         PublicSystemIncludePaths.Add( System.IO.Path.Combine( NatNetPath, "include" ) );
-        PublicLibraryPaths.Add( NatNetLibBinPath );
-        PublicAdditionalLibraries.Add( "NatNetLib.lib" );
-        PublicDelayLoadDLLs.Add( "NatNetLib.dll" );
-        RuntimeDependencies.Add( new RuntimeDependency( Path.Combine( NatNetLibBinPath, "NatNetLib.dll" ) ) );
+
+        if ( Target.Platform == UnrealTargetPlatform.Win32 || Target.Platform == UnrealTargetPlatform.Win64 )
+        {
+            string NatNetLibBinPath = Path.Combine( NatNetPath, "lib", Target.Platform == UnrealTargetPlatform.Win32 ? "Win32" : "Win64" );
+            PublicLibraryPaths.Add( NatNetLibBinPath );
+            PublicAdditionalLibraries.Add( "NatNetLib.lib" );
+            PublicDelayLoadDLLs.Add( "NatNetLib.dll" );
+            RuntimeDependencies.Add( new RuntimeDependency( Path.Combine( NatNetLibBinPath, "NatNetLib.dll" ) ) );
+        }
+        else if ( Target.Platform == UnrealTargetPlatform.Android )
+        {
+            //AdditionalPropertiesForReceipt.Add( new ReceiptProperty( "AndroidPlugin", Path.Combine( ModuleDirectory, "NatNet_APL.xml" ) ) );
+
+            // toolchain will filter
+            string NatNetLibBinPath = Path.Combine( NatNetPath, "lib", "Android" );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "arm64-v8a" ) );
+            //PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "armeabi" ) );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "armeabi-v7a" ) );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "mips" ) );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "mips64" ) );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "x86" ) );
+            PublicLibraryPaths.Add( Path.Combine( NatNetLibBinPath, "x86_64" ) );
+
+            PublicAdditionalLibraries.Add( "NatNetLib" );
+        }
     }
 }

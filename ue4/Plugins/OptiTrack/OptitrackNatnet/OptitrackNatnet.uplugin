@@ -1,7 +1,7 @@
 {
   "FileVersion": 3,
   "Version": 1,
-  "VersionName": "1.0.0",
+  "VersionName": "1.3.0",
   "FriendlyName": "OptiTrack - NatNet Streaming Client",
   "Description": "Provides support for real-time rigid body motion capture streaming from NatNet server applications such as OptiTrack Motive.",
   "Category": "OptiTrack",
@@ -17,7 +17,8 @@
       "LoadingPhase": "Default",
       "WhitelistPlatforms": [
         "Win64",
-        "Win32"
+        "Win32",
+        "Android"
       ]
     }
   ],

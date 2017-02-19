@@ -71,5 +71,4 @@ DerivedDataCache/*
 .ctrlp_cache/
 
 # Third Party Source Files
-!Plugins/OptiTrack/OptitrackNatnet/ThirdParty/NatNetSDK/lib/*
-!Plugins/OptiTrack/OptitrackNatnet/ThirdParty/NatNetSDK/lib/x64/*
+!Plugins/OptiTrack/OptitrackNatnet/ThirdParty/NatNetSDK/lib/**/*

@@ -4,17 +4,10 @@
 
 #pragma once
 
-// FIXME: Can't forward declare sFrameOfMocapData because it's an anonymous struct typedef
 #include <NatNetTypes.h>
 
 #include "OptitrackClientOrigin.generated.h"
 
-UENUM()
-enum class EOptitrackClientConnectionType : uint8
-{
-	Multicast = 0,
-	Unicast,
-};
 
 /**
 * Represents a pose for a tracked rigid body.
@@ -41,6 +34,14 @@ struct FOptitrackRigidBodyState
 };
 
 
+UENUM()
+enum class EOptitrackClientConnectionType : uint8
+{
+	Multicast = 0,
+	Unicast,
+};
+
+
 /**
 *
 */
@@ -50,9 +51,6 @@ class OPTITRACKNATNET_API AOptitrackClientOrigin : public AActor
 	GENERATED_UCLASS_BODY()
 
 public:
-	
-
-
 	/** The network address of the NatNet server to connect to. */
 	UPROPERTY( EditAnywhere, Category=Optitrack )
 	FString ServerAddress;
@@ -112,9 +110,6 @@ public:
 	static AOptitrackClientOrigin* FindHmdClientOrigin( UWorld* World );
 
 protected:
-	// UObject overrides
-	virtual void BeginDestroy() override;
-
 	// AActor overrides
 	virtual void PreInitializeComponents() override;
 	virtual void EndPlay( const EEndPlayReason::Type EndPlayReason ) override;
@@ -123,13 +118,12 @@ private:
 	void InitializeClient();
 	void ShutdownClient();
 
-	// FIXME: Would be nice to forward declare sFrameOfMocapData. See comment at top of file.
-	static void __cdecl NatNetDataCallback( sFrameOfMocapData* NewFrame, void* UserData );
+	static void NATNET_CALLCONV NatNetDataCallback( sFrameOfMocapData* NewFrame, void* UserData );
 
 	class NatNetClient* Client;
 
 	/** Controls access to @LatestRigidBodyStates map. */
-	CRITICAL_SECTION FrameUpdateLock; // TODO: Should be FCriticalSection, but its TryLock API isn't helpful. This plugin is Windows-only for now anyway.
+	FCriticalSection FrameUpdateLock;
 
 	/** Copied from AWorldSettings::WorldToMeters for use in the NatNet callback (which happens on another thread). */
 	float CachedWorldToMeters;

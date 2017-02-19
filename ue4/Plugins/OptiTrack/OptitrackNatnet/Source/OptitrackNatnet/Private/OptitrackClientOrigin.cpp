@@ -10,6 +10,8 @@
 
 #include <NatNetClient.h>
 
+#include <string>
+
 
 AOptitrackClientOrigin::AOptitrackClientOrigin( const FObjectInitializer& ObjectInitializer )
 	: Super( ObjectInitializer )
@@ -24,8 +26,6 @@ AOptitrackClientOrigin::AOptitrackClientOrigin( const FObjectInitializer& Object
 #if WITH_EDITORONLY_DATA
 	RootComponent->bVisualizeComponent = true;
 #endif
-
-	::InitializeCriticalSectionAndSpinCount( &FrameUpdateLock, 4000 );
 }
 
 
@@ -54,7 +54,7 @@ bool AOptitrackClientOrigin::GetLatestRigidBodyStateUntransformed( int32 RbId, F
 
 	// NOTE: This lock blocks NatNet frame delivery for the duration.
 	// See comment in NatNetDataCallback.
-	::EnterCriticalSection( &FrameUpdateLock );
+	FrameUpdateLock.Lock();
 
 	if ( FOptitrackRigidBodyState* pState = LatestRigidBodyStates.Find( RbId ) )
 	{
@@ -62,7 +62,7 @@ bool AOptitrackClientOrigin::GetLatestRigidBodyStateUntransformed( int32 RbId, F
 		bResult = true;
 	}
 
-	::LeaveCriticalSection( &FrameUpdateLock );
+	FrameUpdateLock.Unlock();
 
 	return bResult;
 }
@@ -129,14 +129,6 @@ AOptitrackClientOrigin* AOptitrackClientOrigin::FindHmdClientOrigin( UWorld* Wor
 }
 
 
-void AOptitrackClientOrigin::BeginDestroy()
-{
-	Super::BeginDestroy();
-
-	::DeleteCriticalSection( &FrameUpdateLock );
-}
-
-
 void AOptitrackClientOrigin::PreInitializeComponents()
 {
 	// TODO: Do we need to support this changing at runtime?
@@ -175,9 +167,15 @@ void AOptitrackClientOrigin::InitializeClient()
 
 	check( Client != nullptr );
 
-	Client->SetDataCallback( &NatNetDataCallback, this );
+	Client->SetFrameReceivedCallback( &AOptitrackClientOrigin::NatNetDataCallback, this );
 
-	const int InitializeResult = Client->Initialize( TCHAR_TO_ANSI( *ClientAddress ), TCHAR_TO_ANSI( *ServerAddress ) );
+	const std::string strClientAddr( TCHAR_TO_ANSI( *ClientAddress ) );
+	const std::string strServerAddr( TCHAR_TO_ANSI( *ServerAddress ) );
+
+	sNatNetClientConnectParams connectParams;
+	connectParams.localAddress = strClientAddr.c_str();
+	connectParams.serverAddress = strServerAddr.c_str();
+	const ErrorCode InitializeResult = Client->Connect( connectParams );
 	if ( !ensureMsgf( InitializeResult == ErrorCode_OK, TEXT( "NatNetClient::Initialize failed with return code %d" ), InitializeResult ) )
 	{
 		ShutdownClient();
@@ -190,16 +188,20 @@ void AOptitrackClientOrigin::ShutdownClient()
 {
 	if ( Client != nullptr )
 	{
-		Client->Uninitialize();
+		FrameUpdateLock.Lock();
+
+		Client->Disconnect();
 		check( IOptitrackNatnetPlugin::IsAvailable() );
 		IOptitrackNatnetPlugin::Get().DestroyClient( Client );
 		Client = nullptr;
+
+		FrameUpdateLock.Unlock();
 	}
 }
 
 
 //static
-void __cdecl AOptitrackClientOrigin::NatNetDataCallback( sFrameOfMocapData* NewFrame, void* UserData )
+void NATNET_CALLCONV AOptitrackClientOrigin::NatNetDataCallback( sFrameOfMocapData* NewFrame, void* UserData )
 {
 	AOptitrackClientOrigin* This = reinterpret_cast<AOptitrackClientOrigin*>(UserData);
 
@@ -214,14 +216,20 @@ void __cdecl AOptitrackClientOrigin::NatNetDataCallback( sFrameOfMocapData* NewF
 	// generally much higher than Unreal.
 	// A more sophisticated locking (or lock-free) scheme would be preferable.
 
-	if ( ::TryEnterCriticalSection( &This->FrameUpdateLock ) )
+	if ( This->FrameUpdateLock.TryLock() )
 	{
-		const float deliveryTime = FPlatformTime::Seconds();
+		const double deliveryTime = FPlatformTime::Seconds();
 		const float coordScalingFactor = This->CachedWorldToMeters;
 
 		for ( int i = 0; i < NewFrame->nRigidBodies; ++i )
 		{
 			const sRigidBodyData& rbData = NewFrame->RigidBodies[i];
+
+			const bool bTrackedThisFrame = (rbData.params & 0x01) != 0;
+			if ( bTrackedThisFrame == false )
+			{
+				continue;
+			}
 
 			// Relative to OptiTrack volume origin, with conversions for: scale, Y-up to Z-up, right-handed to left-handed. (X basis is preserved.)
 			const FVector position( rbData.x * coordScalingFactor, rbData.z * coordScalingFactor, rbData.y * coordScalingFactor );
@@ -235,6 +243,6 @@ void __cdecl AOptitrackClientOrigin::NatNetDataCallback( sFrameOfMocapData* NewF
 			This->LatestRigidBodyStates.Emplace( rbData.ID, rbState );
 		}
 
-		::LeaveCriticalSection( &This->FrameUpdateLock );
+		This->FrameUpdateLock.Unlock();
 	}
 }
