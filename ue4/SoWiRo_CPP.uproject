@@ -13,7 +13,7 @@
 	"Plugins": [
 		{
 			"Name": "OptitrackNatnet",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "GearVR",
